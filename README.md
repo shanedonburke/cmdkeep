@@ -6,6 +6,12 @@ Use it for commands you often forget, are tedious to type, or have several param
 
 Commands can be parameterized, and previous arguments are remembered.
 
+# Installation
+
+Check the [Releases](https://github.com/shanedonburke/cmdkeep/releases) section for the latest executables.
+
+Add `ck` to your PATH environment variable for convenience.
+
 # Usage
 
 Run `ck --help` to see available operations, or `ck <command> --help` for help with an individual command.
