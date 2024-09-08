@@ -6,7 +6,7 @@ import (
 )
 
 func WriteToFile(filepath string, content string) error {
-	if err := os.MkdirAll(path.Dir(filepath), 0600); err != nil {
+	if err := os.MkdirAll(path.Dir(filepath), 0o700); err != nil {
 		return err
 	}
 	file, err := os.Create(filepath)
