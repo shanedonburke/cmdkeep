@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 
+	"github.com/google/shlex"
 	"golang.org/x/term"
 )
 
@@ -101,12 +101,13 @@ func (r *Runner) runCommand(command *model.Command, cliArgs []string, printComma
 		fmt.Printf("Running: %s\n", procTemplate.CmdString)
 	}
 
-	cmdProgram := strings.Split(procTemplate.CmdString, " ")[0]
-	cmd := exec.Command(cmdProgram)
+	cmdParts, err := shlex.Split(procTemplate.CmdString)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to parse command: %v\n", err)
+		os.Exit(1)
+	}
 
-	// This fixes args with spaces, e.g. `cat "my file.txt"`
-	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	cmd.SysProcAttr.CmdLine = procTemplate.CmdString
+	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
