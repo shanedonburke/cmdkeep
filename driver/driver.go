@@ -2,8 +2,6 @@ package driver
 
 import "cmdkeep/cmdkeep"
 
-const ENV_VAR = "__ck"
-
 type Driver struct{}
 
 func NewDriver() *Driver {
