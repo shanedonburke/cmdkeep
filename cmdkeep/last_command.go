@@ -26,9 +26,9 @@ func (lc *LastCommand) Run(cli *CLI) {
 		fmt.Fprint(os.Stderr, "no commands have been executed - try `ck run`\n")
 		os.Exit(1)
 	} else if strings.HasPrefix(lastCommand, "key:") {
-		runner.NewRunner().RunKey(m, strings.Split(lastCommand, ":")[1], config.Args, mode)
+		runner.NewRunner().RunKey(m, strings.Split(lastCommand, ":")[1], config.Args, config.UseDefaults, mode)
 	} else if strings.HasPrefix(lastCommand, "template:") {
-		runner.NewRunner().RunTemplate(m, strings.Split(lastCommand, ":")[1], config.Args, mode)
+		runner.NewRunner().RunTemplate(m, strings.Split(lastCommand, ":")[1], config.Args, config.UseDefaults, mode)
 	} else {
 		fmt.Fprintf(os.Stderr, "Invalid last command: %s", lastCommand)
 		os.Exit(1)

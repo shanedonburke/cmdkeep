@@ -18,8 +18,8 @@ func (rc *RunCommand) Run(cli *CLI) {
 	}
 
 	if config.Key != "" {
-		r.RunKey(m, config.Key, config.Args, mode)
+		r.RunKey(m, config.Key, config.Args, config.UseDefaults, mode)
 	} else {
-		r.RunTemplate(m, config.Command, config.Args, mode)
+		r.RunTemplate(m, config.Command, config.Args, config.UseDefaults, mode)
 	}
 }

@@ -31,7 +31,7 @@ type ProcessedTemplate struct {
 	Args      []string
 }
 
-func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, mode RunMode) {
+func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, useDefaults bool, mode RunMode) {
 	command := m.Commands[key]
 	if command == nil {
 		fmt.Fprintf(os.Stderr, "No such command: %s\n", key)
@@ -40,11 +40,9 @@ func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, mode RunMo
 
 	if mode == Prompt {
 		r.promptForKey(key)
-	} else {
-		fmt.Printf("Using last command: '%s'\n", key)
 	}
 
-	outCommand, exitCode := r.runCommand(command, cliArgs, mode)
+	outCommand, exitCode := r.runCommand(command, cliArgs, useDefaults, mode)
 	m.AddCommand(key, outCommand)
 	m.Last = "key:" + key
 	m.LastArgs = outCommand.LastArgs
@@ -52,7 +50,7 @@ func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, mode RunMo
 	os.Exit(exitCode)
 }
 
-func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, mode RunMode) {
+func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, useDefaults bool, mode RunMode) {
 	command := model.NewCommand(template)
 
 	if m.Last == fmt.Sprintf("template:%s", template) {
@@ -61,11 +59,9 @@ func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, 
 
 	if mode == Prompt {
 		r.promptForTemplate(template)
-	} else {
-		fmt.Printf("Using last command: `%s`\n", template)
 	}
 
-	outCommand, exitCode := r.runCommand(command, cliArgs, mode)
+	outCommand, exitCode := r.runCommand(command, cliArgs, useDefaults, mode)
 	m.Last = "template:" + template
 	m.LastArgs = outCommand.LastArgs
 	model.WriteModel(m)
@@ -107,8 +103,8 @@ func (r *Runner) confirmationError(err error) {
 	os.Exit(1)
 }
 
-func (r *Runner) runCommand(command *model.Command, cliArgs []string, mode RunMode) (*model.Command, int) {
-	procTemplate := r.processTemplate(command, cliArgs)
+func (r *Runner) runCommand(command *model.Command, cliArgs []string, useDefaults bool, mode RunMode) (*model.Command, int) {
+	procTemplate := r.processTemplate(command, cliArgs, useDefaults)
 
 	outCommand := &model.Command{
 		Template: command.Template,
@@ -145,7 +141,7 @@ func (r *Runner) runCommand(command *model.Command, cliArgs []string, mode RunMo
 	return outCommand, exitCode
 }
 
-func (r *Runner) processTemplate(command *model.Command, cliArgs []string) *ProcessedTemplate {
+func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDefaults bool) *ProcessedTemplate {
 	template := command.Template
 	lastArgs := command.LastArgs
 
@@ -224,23 +220,26 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string) *Proc
 				varName = fmt.Sprintf("%d", argIdx+1)
 			}
 
-			lastValue := ""
-			if argIdx < len(lastArgs) {
+			hasLastArg := argIdx < len(lastArgs)
+			lastArg := ""
+			if hasLastArg {
 				// An argument has been provided for this var before
-				lastValue = lastArgs[argIdx]
-			}
-
-			if !hasPrintedHelp && argIdx >= len(cliArgs) {
-				fmt.Println("Enter command arguments: (Enter/Return for default if shown, '-' for blank)")
-				hasPrintedHelp = true
+				lastArg = lastArgs[argIdx]
 			}
 
 			var argValue string
 			if argIdx < len(cliArgs) {
 				// An argument for this var was specified through the CLI
 				argValue = cliArgs[argIdx]
+			} else if hasLastArg && useDefaults {
+				argValue = lastArg
 			} else {
-				argValue = r.promptForValue(varName, lastValue)
+				if !hasPrintedHelp {
+					fmt.Println("Enter command arguments: (Enter/Return for default if shown, '-' for blank)")
+					hasPrintedHelp = true
+				}
+
+				argValue = r.promptForValue(varName, lastArg)
 			}
 			args = append(args, argValue)
 			cmdString += argValue

@@ -38,10 +38,18 @@ This will run the `cat` command. You will be prompted for any arguments.
 ck run cat
 ```
 
+
 This will rerun the last command executed with the given arguments.
 
 ```shell
 ck last --args=myfile.txt,someotherarg
+```
+
+This will rerun the last command executed with that execution's arguments.
+The user will not be prompted.
+
+```shell
+ck last -dy
 ```
 
 This will run an arbitrary command without saving it.
@@ -64,4 +72,15 @@ This will delete `cat` and `echo` commands that were previously saved using `ck 
 
 ```shell
 ck rm cat echo
+```
+
+## Other Use Cases
+
+### Evaluate a Command in the Current Shell (Bash)
+
+```shell
+# Add a `source` command with one parameter.
+ck add source "source {file}"
+# Print the command with the given argument, and evaluate it.
+eval "$(ck run source -p --args=install.sh)"
 ```
