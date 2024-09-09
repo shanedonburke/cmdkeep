@@ -92,7 +92,7 @@ func (r *Runner) handleInvalidKey(m *model.Model, key string) {
 
 	fmt.Fprintf(os.Stderr, "No such command: %s\n", key)
 	if closestMatch != "" {
-		fmt.Fprintf(os.Stderr, "Did you mean: `ck %s`?\n", closestMatch)
+		fmt.Fprintf(os.Stderr, "Did you mean `ck %s`?\n", closestMatch)
 	}
 	fmt.Fprintln(os.Stderr, "Try `ck -h` for help.")
 
