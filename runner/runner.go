@@ -2,10 +2,13 @@ package runner
 
 import (
 	"bufio"
+	"cmdkeep/lev"
 	"cmdkeep/model"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/google/shlex"
@@ -34,8 +37,7 @@ type ProcessedTemplate struct {
 func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, useDefaults bool, mode ExecMode) {
 	command := m.Commands[key]
 	if command == nil {
-		fmt.Fprintf(os.Stderr, "No such command: %s (try `ck -h`)\n", key)
-		os.Exit(1)
+		r.handleInvalidKey(m, key)
 	}
 
 	if mode == Prompt {
@@ -66,6 +68,35 @@ func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, 
 	m.LastArgs = outCommand.LastArgs
 	model.WriteModel(m)
 	os.Exit(exitCode)
+}
+
+func (r *Runner) handleInvalidKey(m *model.Model, key string) {
+	// Use Levenshtein distance algorithm to suggest valid commands.
+	// We may suggest CK sub-commands and/or saved commands based
+	// on the CLI context.
+	var pool []string
+
+	// Don't suggest CK sub-commands if the `ck run ...` format was used.
+	// If the user just did `ck asdf`, they may be trying for either a
+	// CK sub-command (e.g. `add`) or a saved command.
+	if slices.Contains(os.Args, "run") {
+		pool = []string{}
+	} else {
+		pool = lev.GetReservedWords()
+	}
+
+	for existingKey := range maps.Keys(m.Commands) {
+		pool = append(pool, existingKey)
+	}
+	closestMatch := lev.FindClosestMatch(key, pool)
+
+	fmt.Fprintf(os.Stderr, "No such command: %s\n", key)
+	if closestMatch != "" {
+		fmt.Fprintf(os.Stderr, "Did you mean: `ck %s`?\n", closestMatch)
+	}
+	fmt.Fprintln(os.Stderr, "Try `ck -h` for help.")
+
+	os.Exit(1)
 }
 
 func (r *Runner) promptForKey(key string) {
