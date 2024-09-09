@@ -15,7 +15,7 @@ func (lc *LastCommand) Run(cli *CLI) {
 	m := model.ReadModel()
 	lastCommand := m.Last
 
-	var mode runner.RunMode = runner.Prompt
+	var mode runner.ExecMode = runner.Prompt
 	if config.PrintOnly {
 		mode = runner.Print
 	} else if config.NoPrompt {

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/term"
 )
 
-type RunMode int
+type ExecMode int
 
 const (
 	Execute = iota + 1
@@ -31,10 +31,10 @@ type ProcessedTemplate struct {
 	Args      []string
 }
 
-func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, useDefaults bool, mode RunMode) {
+func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, useDefaults bool, mode ExecMode) {
 	command := m.Commands[key]
 	if command == nil {
-		fmt.Fprintf(os.Stderr, "No such command: %s\n", key)
+		fmt.Fprintf(os.Stderr, "No such command: %s (try `ck -h`)\n", key)
 		os.Exit(1)
 	}
 
@@ -50,7 +50,7 @@ func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, useDefault
 	os.Exit(exitCode)
 }
 
-func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, useDefaults bool, mode RunMode) {
+func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, useDefaults bool, mode ExecMode) {
 	command := model.NewCommand(template)
 
 	if m.Last == fmt.Sprintf("template:%s", template) {
@@ -103,7 +103,7 @@ func (r *Runner) confirmationError(err error) {
 	os.Exit(1)
 }
 
-func (r *Runner) runCommand(command *model.Command, cliArgs []string, useDefaults bool, mode RunMode) (*model.Command, int) {
+func (r *Runner) runCommand(command *model.Command, cliArgs []string, useDefaults bool, mode ExecMode) (*model.Command, int) {
 	procTemplate := r.processTemplate(command, cliArgs, useDefaults)
 
 	outCommand := &model.Command{
@@ -147,6 +147,7 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 
 	args := []string{}
 	argIdx := 0
+	argsByName := map[string]string{}
 
 	hasPrintedHelp := false
 	cmdString := ""
@@ -172,7 +173,7 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 			}
 		} else if ch == '{' {
 			// Unescaped opening brace - parse template variable
-			varName := ""
+			paramName := ""
 			i++ // Skip opening brace
 			nameCh, ok := getCharByIndex(template, i)
 
@@ -190,7 +191,7 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 					if nameNext, ok := getCharByIndex(template, i+1); ok {
 						if isEscapableChar(rune(nameNext)) {
 							// Append the escaped character and continue
-							varName += string(nameNext)
+							paramName += string(nameNext)
 							i++
 						} else {
 							// The next char is not escapable,so just put a backslash
@@ -198,10 +199,10 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 						}
 					} else {
 						// Backslash was the last character in the template
-						varName += string(nameCh)
+						paramName += string(nameCh)
 					}
 				} else {
-					varName += string(nameCh)
+					paramName += string(nameCh)
 				}
 
 				i++
@@ -210,14 +211,14 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 			if !ok {
 				// The template ended without a closing brace.
 				// Add the opening brace and subsequent chars to command.
-				cmdString += "{" + varName
+				cmdString += "{" + paramName
 				break
 			}
 			// Reached closing brace
 
-			if varName == "" {
+			if paramName == "" {
 				// Variable was '{}' - name it according to its index
-				varName = fmt.Sprintf("%d", argIdx+1)
+				paramName = fmt.Sprintf("%d", argIdx+1)
 			}
 
 			hasLastArg := argIdx < len(lastArgs)
@@ -228,20 +229,27 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 			}
 
 			var argValue string
-			if argIdx < len(cliArgs) {
-				// An argument for this var was specified through the CLI
+
+			if argByName, ok := argsByName[paramName]; ok {
+				// This param name matches a previous one - use previous value
+				argValue = argByName
+			} else if argIdx < len(cliArgs) {
+				// An argument for this param was specified through the CLI
 				argValue = cliArgs[argIdx]
 			} else if hasLastArg && useDefaults {
+				// `--use-defaults` was specified and this param has a default
 				argValue = lastArg
 			} else {
+				// We don't have a value from any source
 				if !hasPrintedHelp {
 					fmt.Println("Enter command arguments: (Enter/Return for default if shown, '-' for blank)")
 					hasPrintedHelp = true
 				}
 
-				argValue = r.promptForValue(varName, lastArg)
+				argValue = r.promptForValue(paramName, lastArg)
 			}
 			args = append(args, argValue)
+			argsByName[paramName] = argValue
 			cmdString += argValue
 			argIdx++
 		} else {
@@ -255,11 +263,11 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 	}
 }
 
-func (r *Runner) promptForValue(varName string, def string) string {
+func (r *Runner) promptForValue(paramName string, def string) string {
 	if def != "" {
-		fmt.Printf("- %s [%s]: ", varName, def)
+		fmt.Printf("- %s [%s]: ", paramName, def)
 	} else {
-		fmt.Printf("- %s: ", varName)
+		fmt.Printf("- %s: ", paramName)
 	}
 
 	reader := bufio.NewReader(os.Stdin)

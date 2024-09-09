@@ -12,7 +12,7 @@ func (rc *RunCommand) Run(cli *CLI) {
 	m := model.ReadModel()
 	r := runner.NewRunner()
 
-	var mode runner.RunMode = runner.Execute
+	var mode runner.ExecMode = runner.Execute
 	if config.PrintOnly {
 		mode = runner.Print
 	}

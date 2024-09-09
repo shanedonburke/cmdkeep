@@ -11,14 +11,17 @@ import (
 
 func main() {
 	var cli cmdkeep.CLI
-	ctx := kong.Parse(&cli)
+	ctx := kong.Parse(&cli,
+		kong.Name("ck"),
+		kong.Description("A tool for saving and reusing shell commands."))
+
 	d := driver.NewDriver()
 	switch ctx.Command() {
 	case "add <key> <command>":
 		d.Run(&cmdkeep.AddCommand{}, &cli)
 	case "run":
 		if cli.Run.Command == "" {
-			fmt.Fprintln(os.Stderr, "Error: no command specified - try `ck run --help`")
+			fmt.Fprintln(os.Stderr, "Error: no command specified - try `ck run -h`")
 			os.Exit(1)
 		}
 		d.Run(&cmdkeep.RunCommand{}, &cli)
