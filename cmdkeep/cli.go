@@ -6,15 +6,15 @@ type CLI struct {
 		Command string `arg help:"Command template."`
 	} `cmd help:"Save a new command."`
 	Run struct {
-		Key          string   "arg optional:\"\" help:\"Command key previously saved using `ck add`\""
-		Command      string   `optional:"" short:"c" help:"Command template to run instead of saved key."`
-		Args         []string `optional:"" short:"a" help:"Command arguments to skip prompting."`
-		PrintCommand bool     `short:"p" default:"false" help:"Prints the built command before execution."`
+		Key       string   "arg optional:\"\" help:\"Command key previously saved using `ck add`\""
+		Command   string   `optional:"" short:"c" help:"Command template to run instead of saved key."`
+		Args      []string `optional:"" short:"a" help:"Command arguments to skip prompting."`
+		PrintOnly bool     `short:"p" default:"false" help:"Prints the built command instead of executing it."`
 	} `cmd help:"Run a saved command or a command template."`
 	Last struct {
-		Args         []string `optional:"" short:"a" help:"Command arguments to skip prompting."`
-		PrintCommand bool     `short:"p" default:"false" help:"Prints the built command before execution."`
-		NoPrompt     bool     `name:"yes" short:"y" default:"false" help:"Skip confirmation prompt."`
+		Args      []string `optional:"" short:"a" help:"Command arguments to skip prompting."`
+		PrintOnly bool     `short:"p" default:"false" help:"Prints the built command instead of executing it."`
+		NoPrompt  bool     `name:"yes" short:"y" default:"false" help:"Skip confirmation prompt."`
 	} `cmd help:"Rerun the last command that was executed."`
 	Commands struct {
 	} `cmd help:"List all saved commands."`

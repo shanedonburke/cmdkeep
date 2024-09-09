@@ -12,6 +12,14 @@ import (
 	"golang.org/x/term"
 )
 
+type RunMode int
+
+const (
+	Execute = iota + 1
+	Print
+	Prompt
+)
+
 type Runner struct{}
 
 func NewRunner() *Runner {
@@ -23,18 +31,20 @@ type ProcessedTemplate struct {
 	Args      []string
 }
 
-func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, printCommand bool, promptFirst bool) {
+func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, mode RunMode) {
 	command := m.Commands[key]
 	if command == nil {
 		fmt.Fprintf(os.Stderr, "No such command: %s\n", key)
 		os.Exit(1)
 	}
 
-	if promptFirst {
+	if mode == Prompt {
 		r.promptForKey(key)
+	} else {
+		fmt.Printf("Using last command: '%s'\n", key)
 	}
 
-	outCommand, exitCode := r.runCommand(command, cliArgs, printCommand)
+	outCommand, exitCode := r.runCommand(command, cliArgs, mode)
 	m.AddCommand(key, outCommand)
 	m.Last = "key:" + key
 	m.LastArgs = outCommand.LastArgs
@@ -42,18 +52,20 @@ func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, printComma
 	os.Exit(exitCode)
 }
 
-func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, printCommand bool, promptFirst bool) {
+func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, mode RunMode) {
 	command := model.NewCommand(template)
 
 	if m.Last == fmt.Sprintf("template:%s", template) {
 		command.LastArgs = m.LastArgs
 	}
 
-	if promptFirst {
+	if mode == Prompt {
 		r.promptForTemplate(template)
+	} else {
+		fmt.Printf("Using last command: `%s`\n", template)
 	}
 
-	outCommand, exitCode := r.runCommand(command, cliArgs, printCommand)
+	outCommand, exitCode := r.runCommand(command, cliArgs, mode)
 	m.Last = "template:" + template
 	m.LastArgs = outCommand.LastArgs
 	model.WriteModel(m)
@@ -95,11 +107,19 @@ func (r *Runner) confirmationError(err error) {
 	os.Exit(1)
 }
 
-func (r *Runner) runCommand(command *model.Command, cliArgs []string, printCommand bool) (*model.Command, int) {
+func (r *Runner) runCommand(command *model.Command, cliArgs []string, mode RunMode) (*model.Command, int) {
 	procTemplate := r.processTemplate(command, cliArgs)
-	if printCommand {
-		fmt.Printf("Running: %s\n", procTemplate.CmdString)
+
+	outCommand := &model.Command{
+		Template: command.Template,
+		LastArgs: procTemplate.Args,
 	}
+
+	if mode == Print {
+		fmt.Println(procTemplate.CmdString)
+		return outCommand, 0
+	}
+	// Mode is `Execute`
 
 	cmdParts, err := shlex.Split(procTemplate.CmdString)
 	if err != nil {
@@ -121,10 +141,6 @@ func (r *Runner) runCommand(command *model.Command, cliArgs []string, printComma
 			fmt.Fprintf(os.Stderr, "Command execution failed: %v\n", err)
 			exitCode = 1
 		}
-	}
-	outCommand := &model.Command{
-		Template: command.Template,
-		LastArgs: procTemplate.Args,
 	}
 	return outCommand, exitCode
 }
