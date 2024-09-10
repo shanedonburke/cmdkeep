@@ -110,6 +110,47 @@ ck add source "source {file}"
 eval "$(ck source -p --args=install.sh)"
 ```
 
+# Example Commands
+
+Add these commands to your installation with `ck add`.
+
+Note that quotes may need to be escaped, and many of the commands are for Bash/Unix systems.
+
+## Git
+
+| Key           | Template                                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| checkout_file | `git checkout {revision} -- {file}`                                                                                                                |
+| clone_code    | `bash -c 'repo_url={URL}; git clone $repo_url && cd "$(basename $repo_url .git)" && code .'`                                                       |
+| gcp           | `bash -c 'git add . && git commit && git push'`                                                                                                    |
+| glog          | `git log --pretty="format:%C(auto,yellow)%h%C(auto,magenta)% G?%C(auto,blue)%>(18,trunc)%ad %C(auto,green)%<(12,trunc)%aN%C(auto,reset)%s" {file}` |
+| new_branch    | `git checkout -b '{branch name}'`                                                                                                                  |
+
+## Files
+
+| Key                                         | Template                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ssh                                         | `ssh {flags} {user}@{hostname}`                                                            |
+| rsync                                       | `rsync -avz --progress {src} {user}@{hostname}:{dest}`                                     |
+| compress                                    | `tar {flags} -czvf '{archive name}' {contents}`                                            |
+| extract                                     | `bash -c "mkdir -p '{output directory}' && tar -xzvf '{archive}' -C '{output directory}'"` |
+| chmod                                       | `chmod {flags} {perm} '{path}'`                                                            |
+| delete_empty                                | `find . -type d -empty -delete`                                                            |
+| find_files                                  | `find '{directory}' -type f -iname '{glob}'`                                               |
+| backup_replace                              | `sed -i.bak 's/{old text}/{new text}/g' '{file}'`                                          |
+| rec_replace                                 | `find '{directory}' -type f -exec sed -i 's/{old text}/{new text}/g' \{\} +`               |
+| diff                                        | `diff {} {}`                                                                               |
+| [rg](https://github.com/BurntSushi/ripgrep) | `rg '{search term}' '{directory}' --glob '{glob}' {flags}`                                 |
+
+## Bash Functions
+
+| Key          | Template                                             |
+| ------------ | ---------------------------------------------------- |
+| redirect_all | `bash -c "{command} &> '{file}'"`                    |
+| tee_cmd      | `bash -c '{command} \| tee "{output file}"'`         |
+| bg           | `bash -c "nohup {command} > '{output file}' 2>&1 &"` |
+
+
 # Building from Source
 
 1. Clone the repository.
