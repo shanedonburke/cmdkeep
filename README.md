@@ -112,7 +112,7 @@ eval "$(ck source -p --args=install.sh)"
 
 # Example Commands
 
-Add these commands to your installation with `ck add`.
+Add these commands to your installation using `ck add`.
 
 Note that quotes may need to be escaped, and many of the commands are for Bash/Unix systems.
 
