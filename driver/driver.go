@@ -5,7 +5,6 @@ import (
 	"cmdkeep/cmdkeep"
 	"cmdkeep/model"
 	"cmdkeep/prompt"
-	"cmdkeep/stream"
 	"cmdkeep/suggest"
 	"fmt"
 	"maps"
@@ -71,7 +70,7 @@ func (d *Driver) preCLIParse(m *model.Model) {
 func (d *Driver) suggestCKCommand(m *model.Model) string {
 	suggestion := suggest.NoSuggestion
 
-	if cmdStr, found := getFirstNonFlagArg(); found {
+	if cmdStr, found := getSuggestableArg(); found {
 		if d.isValidCommand(m, cmdStr) {
 			return suggest.NoSuggestion
 		}
@@ -111,10 +110,22 @@ func (d *Driver) promptForSuggestion(suggestion string) {
 	prompt.ConfirmOrExit(promptStr)
 }
 
-func getFirstNonFlagArg() (string, bool) {
-	return stream.FindFirst(os.Args[1:], isNonFlag)
+func getSuggestableArg() (string, bool) {
+	for _, arg := range os.Args[1:] {
+		if isCommandFlag(arg) {
+			// If the user specified `--command`, we want to passthrough and
+			// treat the execution as a `ck run` invocation.
+			// Otherwise, `ck -c template` tries to suggest for `template`.
+			return "", false
+		} else if !strings.HasPrefix(arg, "-") {
+			// Arg is not a flag = candidate for suggestion
+			return arg, true
+		}
+	}
+	// No argument for which a suggestion can be generated
+	return "", false
 }
 
-func isNonFlag(arg string) bool {
-	return !strings.HasPrefix(arg, "-")
+func isCommandFlag(arg string) bool {
+	return strings.HasPrefix(arg, "-c") || strings.HasPrefix(arg, "--command")
 }

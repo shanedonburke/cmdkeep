@@ -4,12 +4,21 @@ import (
 	"cmdkeep/cli"
 	"cmdkeep/model"
 	"cmdkeep/runner"
+	"fmt"
+	"os"
+	"strings"
 )
 
 type RunCommand struct{}
 
 func (rc *RunCommand) Run(cl *cli.CLI, m *model.Model) {
 	config := cl.Run
+
+	if config.Key == "" && strings.TrimSpace(config.Command) == "" {
+		fmt.Fprintln(os.Stderr, "Error: `ck run` must specify key or command - try `ck run -h`")
+		os.Exit(1)
+	}
+
 	r := runner.NewRunner()
 
 	var mode runner.ExecMode = runner.Execute
