@@ -1,15 +1,15 @@
 package cmdkeep
 
 import (
+	"cmdkeep/cli"
 	"cmdkeep/model"
 	"cmdkeep/runner"
 )
 
 type RunCommand struct{}
 
-func (rc *RunCommand) Run(cli *CLI) {
-	config := cli.Run
-	m := model.ReadModel()
+func (rc *RunCommand) Run(cl *cli.CLI, m *model.Model) {
+	config := cl.Run
 	r := runner.NewRunner()
 
 	var mode runner.ExecMode = runner.Execute

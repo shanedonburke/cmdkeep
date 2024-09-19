@@ -1,4 +1,12 @@
-package cmdkeep
+package cli
+
+var CommandStrings = []string{
+	"add",
+	"rm",
+	"commands",
+	"run",
+	"last",
+}
 
 type add struct {
 	Key     string `arg help:"Key that will be used to run the command."`

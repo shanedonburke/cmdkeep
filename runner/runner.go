@@ -2,17 +2,14 @@ package runner
 
 import (
 	"bufio"
-	"cmdkeep/lev"
 	"cmdkeep/model"
+	"cmdkeep/prompt"
 	"fmt"
-	"maps"
 	"os"
 	"os/exec"
-	"slices"
 	"strings"
 
 	"github.com/google/shlex"
-	"golang.org/x/term"
 )
 
 type ExecMode int
@@ -34,17 +31,18 @@ type ProcessedTemplate struct {
 	Args      []string
 }
 
-func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, useDefaults bool, mode ExecMode) {
+func (r *Runner) RunKey(m *model.Model, key string, clArgs []string, useDefaults bool, mode ExecMode) {
 	command := m.Commands[key]
 	if command == nil {
-		r.handleInvalidKey(m, key)
+		fmt.Fprintf(os.Stderr, "Error: Unknown command key: %s\n", key)
+		os.Exit(1)
 	}
 
 	if mode == Prompt {
 		r.promptForKey(key)
 	}
 
-	outCommand, exitCode := r.runCommand(command, cliArgs, useDefaults, mode)
+	outCommand, exitCode := r.runCommand(command, clArgs, useDefaults, mode)
 	m.AddCommand(key, outCommand)
 	m.Last = "key:" + key
 	m.LastArgs = outCommand.LastArgs
@@ -52,7 +50,7 @@ func (r *Runner) RunKey(m *model.Model, key string, cliArgs []string, useDefault
 	os.Exit(exitCode)
 }
 
-func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, useDefaults bool, mode ExecMode) {
+func (r *Runner) RunTemplate(m *model.Model, template string, clArgs []string, useDefaults bool, mode ExecMode) {
 	command := model.NewCommand(template)
 
 	if m.Last == fmt.Sprintf("template:%s", template) {
@@ -63,79 +61,23 @@ func (r *Runner) RunTemplate(m *model.Model, template string, cliArgs []string, 
 		r.promptForTemplate(template)
 	}
 
-	outCommand, exitCode := r.runCommand(command, cliArgs, useDefaults, mode)
+	outCommand, exitCode := r.runCommand(command, clArgs, useDefaults, mode)
 	m.Last = "template:" + template
 	m.LastArgs = outCommand.LastArgs
 	model.WriteModel(m)
 	os.Exit(exitCode)
 }
 
-func (r *Runner) handleInvalidKey(m *model.Model, key string) {
-	// Use Levenshtein distance algorithm to suggest valid commands.
-	// We may suggest CK sub-commands and/or saved commands based
-	// on the CLI context.
-	var pool []string
-
-	// Don't suggest CK sub-commands if the `ck run ...` format was used.
-	// If the user just did `ck asdf`, they may be trying for either a
-	// CK sub-command (e.g. `add`) or a saved command.
-	if slices.Contains(os.Args, "run") {
-		pool = []string{}
-	} else {
-		pool = lev.GetReservedWords()
-	}
-
-	for existingKey := range maps.Keys(m.Commands) {
-		pool = append(pool, existingKey)
-	}
-	closestMatch := lev.FindClosestMatch(key, pool)
-
-	fmt.Fprintf(os.Stderr, "No such command: %s\n", key)
-	if closestMatch != "" {
-		fmt.Fprintf(os.Stderr, "Did you mean `ck %s`?\n", closestMatch)
-	}
-	fmt.Fprintln(os.Stderr, "Try `ck -h` for help.")
-
-	os.Exit(1)
-}
-
 func (r *Runner) promptForKey(key string) {
-	r.confirmOrExit(fmt.Sprintf("Run command '%s'? (y or n): ", key))
+	prompt.ConfirmOrExit(fmt.Sprintf("Run command '%s'? (y/n): ", key))
 }
 
 func (r *Runner) promptForTemplate(template string) {
-	r.confirmOrExit(fmt.Sprintf("Run command `%s`? (y or n): ", template))
+	prompt.ConfirmOrExit(fmt.Sprintf("Run command `%s`? (y/n): ", template))
 }
 
-func (r *Runner) confirmOrExit(prompt string) {
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		r.confirmationError(err)
-	}
-
-	fmt.Print(prompt)
-
-	buf := make([]byte, 1)
-	if _, err = os.Stdin.Read(buf); err != nil {
-		r.confirmationError(err)
-	}
-	answer := strings.ToLower(string(buf[0]))
-
-	if answer == "y" {
-		term.Restore(int(os.Stdin.Fd()), oldState)
-		fmt.Print("\n")
-	} else {
-		os.Exit(0)
-	}
-}
-
-func (r *Runner) confirmationError(err error) {
-	fmt.Fprintf(os.Stderr, "Command confirmation failed: %v\n", err)
-	os.Exit(1)
-}
-
-func (r *Runner) runCommand(command *model.Command, cliArgs []string, useDefaults bool, mode ExecMode) (*model.Command, int) {
-	procTemplate := r.processTemplate(command, cliArgs, useDefaults)
+func (r *Runner) runCommand(command *model.Command, clArgs []string, useDefaults bool, mode ExecMode) (*model.Command, int) {
+	procTemplate := r.processTemplate(command, clArgs, useDefaults)
 
 	outCommand := &model.Command{
 		Template: command.Template,
@@ -150,7 +92,7 @@ func (r *Runner) runCommand(command *model.Command, cliArgs []string, useDefault
 
 	cmdParts, err := shlex.Split(procTemplate.CmdString)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse command: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: Failed to parse command: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -162,17 +104,17 @@ func (r *Runner) runCommand(command *model.Command, cliArgs []string, useDefault
 
 	exitCode := 0
 	if err := cmd.Run(); err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			exitCode = exiterr.ExitCode()
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
 		} else {
-			fmt.Fprintf(os.Stderr, "Command execution failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: Command execution failed: %v\n", err)
 			exitCode = 1
 		}
 	}
 	return outCommand, exitCode
 }
 
-func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDefaults bool) *ProcessedTemplate {
+func (r *Runner) processTemplate(command *model.Command, clArgs []string, useDefaults bool) *ProcessedTemplate {
 	template := command.Template
 	lastArgs := command.LastArgs
 
@@ -264,9 +206,9 @@ func (r *Runner) processTemplate(command *model.Command, cliArgs []string, useDe
 			if argByName, ok := argsByName[paramName]; ok {
 				// This param name matches a previous one - use previous value
 				argValue = argByName
-			} else if argIdx < len(cliArgs) {
+			} else if argIdx < len(clArgs) {
 				// An argument for this param was specified through the CLI
-				argValue = cliArgs[argIdx]
+				argValue = clArgs[argIdx]
 			} else if hasLastArg && useDefaults {
 				// `--use-defaults` was specified and this param has a default
 				argValue = lastArg
@@ -304,7 +246,7 @@ func (r *Runner) promptForValue(paramName string, def string) string {
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Value prompt failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: Value prompt failed: %v\n", err)
 		os.Exit(1)
 	}
 	input = strings.TrimSpace(input)

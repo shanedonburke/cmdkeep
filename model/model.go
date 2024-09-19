@@ -86,11 +86,11 @@ func WriteModel(m *Model) {
 }
 
 func readFailure(err error) {
-	fmt.Fprintf(os.Stderr, "Failed to read model: %v\n", err)
+	fmt.Fprintf(os.Stderr, "Error:Failed to read model: %v\n", err)
 	os.Exit(1)
 }
 
 func writeFailure(err error) {
-	fmt.Fprintf(os.Stderr, "Failed to write model: %v\n", err)
+	fmt.Fprintf(os.Stderr, "Error: Failed to write model: %v\n", err)
 	os.Exit(1)
 }

@@ -1,6 +1,7 @@
 package cmdkeep
 
 import (
+	"cmdkeep/cli"
 	"cmdkeep/model"
 	"fmt"
 	"maps"
@@ -10,9 +11,7 @@ import (
 
 type ListCommand struct{}
 
-func (lc *ListCommand) Run(cli *CLI) {
-	m := model.ReadModel()
-
+func (lc *ListCommand) Run(cl *cli.CLI, m *model.Model) {
 	keys := make([]string, len(m.Commands))
 	i := 0
 	for key := range maps.Keys(m.Commands) {
