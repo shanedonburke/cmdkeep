@@ -3,7 +3,9 @@ package prompt
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"golang.org/x/term"
 )
@@ -11,12 +13,40 @@ import (
 func ConfirmOrExit(prompt string) {
 	termState := makeTermRaw()
 
-	fmt.Print(prompt)
+	// We need to capture SIGINT (Ctrl+C) so we can restore the terminal
+	// to its non-raw state when triggered, i.e. before exiting.
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, os.Interrupt)
 
+	cancelChan := make(chan bool, 1)
+
+	go func() {
+		for {
+			select {
+			case <-interruptChan:
+				// SIGINT
+				restoreTermState(termState)
+				os.Exit(0)
+			case <-cancelChan:
+				return
+			}
+		}
+	}()
+
+	defer func() {
+		// Non-SIGINT case:
+		// Restore terminal state and cancel SIGINT capture/goroutine
+		restoreTermState(termState)
+		signal.Stop(interruptChan)
+		signal.Reset(syscall.SIGINT)
+		cancelChan <- true
+	}()
+
+	fmt.Print(prompt)
 	confirmed := readYesNo()
 
 	if confirmed {
-		restoreTermState(termState)
+		// Continue execution
 		fmt.Print("\n")
 	} else {
 		os.Exit(0)

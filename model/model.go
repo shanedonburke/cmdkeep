@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+const (
+	LAST_COMMAND_KEY      = "key:"
+	LAST_COMMAND_TEMPLATE = "template:"
+)
+
 type Command struct {
 	Template string
 	LastArgs []string

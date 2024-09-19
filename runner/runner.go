@@ -44,7 +44,7 @@ func (r *Runner) RunKey(m *model.Model, key string, clArgs []string, useDefaults
 
 	outCommand, exitCode := r.runCommand(command, clArgs, useDefaults, mode)
 	m.AddCommand(key, outCommand)
-	m.Last = "key:" + key
+	m.Last = model.LAST_COMMAND_KEY + key
 	m.LastArgs = outCommand.LastArgs
 	model.WriteModel(m)
 	os.Exit(exitCode)
@@ -62,7 +62,7 @@ func (r *Runner) RunTemplate(m *model.Model, template string, clArgs []string, u
 	}
 
 	outCommand, exitCode := r.runCommand(command, clArgs, useDefaults, mode)
-	m.Last = "template:" + template
+	m.Last = model.LAST_COMMAND_TEMPLATE + template
 	m.LastArgs = outCommand.LastArgs
 	model.WriteModel(m)
 	os.Exit(exitCode)

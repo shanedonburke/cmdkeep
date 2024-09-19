@@ -25,9 +25,9 @@ func (lc *LastCommand) Run(cl *cli.CLI, m *model.Model) {
 	if lastCommand == "" {
 		fmt.Fprint(os.Stderr, "Error: No commands have been executed - try `ck run`\n")
 		os.Exit(1)
-	} else if strings.HasPrefix(lastCommand, "key:") {
+	} else if strings.HasPrefix(lastCommand, model.LAST_COMMAND_KEY) {
 		runner.NewRunner().RunKey(m, strings.Split(lastCommand, ":")[1], config.Args, config.UseDefaults, mode)
-	} else if strings.HasPrefix(lastCommand, "template:") {
+	} else if strings.HasPrefix(lastCommand, model.LAST_COMMAND_TEMPLATE) {
 		runner.NewRunner().RunTemplate(m, strings.Split(lastCommand, ":")[1], config.Args, config.UseDefaults, mode)
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: Invalid last command: %s", lastCommand)
