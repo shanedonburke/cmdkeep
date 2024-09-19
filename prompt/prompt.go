@@ -26,6 +26,7 @@ func ConfirmOrExit(prompt string) {
 			case <-interruptChan:
 				// SIGINT
 				restoreTermState(termState)
+				fmt.Println()
 				os.Exit(0)
 			case <-cancelChan:
 				return
@@ -49,6 +50,11 @@ func ConfirmOrExit(prompt string) {
 		// Continue execution
 		fmt.Print("\n")
 	} else {
+		restoreTermState(termState)
+		fmt.Println()
+		signal.Stop(interruptChan)
+		signal.Reset(syscall.SIGINT)
+		cancelChan <- true
 		os.Exit(0)
 	}
 }
