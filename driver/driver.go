@@ -43,6 +43,15 @@ func (d *Driver) Run() {
 }
 
 func (d *Driver) preCLIParse(m *model.Model) {
+	if len(os.Args) == 1 {
+		newProcCmd := exec.Command(os.Args[0], "--help")
+		newProcCmd.Stdin = os.Stdin
+		newProcCmd.Stdout = os.Stdout
+		newProcCmd.Stderr = os.Stderr
+		newProcCmd.Run()
+		os.Exit(0)
+	}
+
 	if ckCmdSuggestion := d.suggestCKCommand(m); ckCmdSuggestion != suggest.NoSuggestion {
 		newProcArgs := []string{ckCmdSuggestion}
 
