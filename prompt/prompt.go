@@ -48,7 +48,7 @@ func ConfirmOrExit(prompt string) {
 
 	if confirmed {
 		// Continue execution
-		fmt.Print("\n")
+		fmt.Println()
 	} else {
 		restoreTermState(termState)
 		fmt.Println()
