@@ -20,13 +20,21 @@ func ConfirmOrExit(prompt string) {
 
 	cancelChan := make(chan bool, 1)
 
+	endPrompt := func() {
+		// Restore terminal state and cancel SIGINT capture/goroutine
+		restoreTermState(termState)
+		fmt.Println()
+		signal.Stop(interruptChan)
+		signal.Reset(syscall.SIGINT)
+		cancelChan <- true
+	}
+
 	go func() {
 		for {
 			select {
 			case <-interruptChan:
 				// SIGINT
-				restoreTermState(termState)
-				fmt.Println()
+				endPrompt()
 				os.Exit(0)
 			case <-cancelChan:
 				return
@@ -34,27 +42,11 @@ func ConfirmOrExit(prompt string) {
 		}
 	}()
 
-	defer func() {
-		// Non-SIGINT case:
-		// Restore terminal state and cancel SIGINT capture/goroutine
-		restoreTermState(termState)
-		signal.Stop(interruptChan)
-		signal.Reset(syscall.SIGINT)
-		cancelChan <- true
-	}()
-
 	fmt.Print(prompt)
 	confirmed := readYesNo()
+	endPrompt()
 
-	if confirmed {
-		// Continue execution
-		fmt.Print("\r\n")
-	} else {
-		restoreTermState(termState)
-		fmt.Println()
-		signal.Stop(interruptChan)
-		signal.Reset(syscall.SIGINT)
-		cancelChan <- true
+	if !confirmed {
 		os.Exit(0)
 	}
 }
